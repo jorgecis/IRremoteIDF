@@ -6,6 +6,7 @@
 #define __STDC_LIMIT_MACROS
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <algorithm>
 #ifndef ARDUINO

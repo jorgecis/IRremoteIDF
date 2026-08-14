@@ -11,6 +11,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string>
+#ifdef UNIT_TEST
+#include <iostream>  // Debug output goes to cout when off-target.
+#endif  // UNIT_TEST
 
 /// The protocol code builds human readable output with `String`.
 /// On ESP-IDF that is just `std::string`.
@@ -89,16 +92,24 @@ void irCarrierOff(int8_t channel);
 // Debug output. Enable by defining DEBUG (e.g. -DDEBUG=1).
 #ifdef DEBUG
 #ifdef UNIT_TEST
-#include <iostream>
-#define DPRINT(x) do { std::cout << x; } while (0)
-#define DPRINTLN(x) do { std::cout << x << std::endl; } while (0)
+#define DPRINT(x) do { \
+    std::cout << x; \
+  } while (0)
+#define DPRINTLN(x) do { \
+    std::cout << x << std::endl; \
+  } while (0)
 #else  // UNIT_TEST
 void irDebugPrint(const char *str);
 void irDebugPrint(const String &str);
 void irDebugPrint(uint64_t value);
 void irDebugPrint(int64_t value);
-#define DPRINT(x) do { irDebugPrint(x); } while (0)
-#define DPRINTLN(x) do { irDebugPrint(x); irDebugPrint("\n"); } while (0)
+#define DPRINT(x) do { \
+    irDebugPrint(x); \
+  } while (0)
+#define DPRINTLN(x) do { \
+    irDebugPrint(x); \
+    irDebugPrint("\n"); \
+  } while (0)
 #endif  // UNIT_TEST
 #else  // DEBUG
 #define DPRINT(x)

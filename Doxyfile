@@ -1,0 +1,22 @@
+PROJECT_NAME           = "IRremoteIDF"
+PROJECT_BRIEF          = "Infrared send & receive for ESP-IDF"
+OUTPUT_DIRECTORY       = docs/doxygen
+INPUT                  = include
+INPUT                  += src
+INPUT                  += docs/doxygen_index.md
+USE_MDFILE_AS_MAINPAGE = docs/doxygen_index.md
+RECURSIVE              = YES
+EXCLUDE                = examples
+EXCLUDE               += include/locale
+MULTILINE_CPP_IS_BRIEF = YES
+TAB_SIZE               = 2
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_LOCAL_CLASSES  = NO
+GENERATE_LATEX         = NO
+ENABLE_PREPROCESSING   = NO
+QUIET                  = YES
+# Upstream builds docs with WARN_AS_ERROR. Left off here so a missing
+# docblock can't turn the whole pipeline red.
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO

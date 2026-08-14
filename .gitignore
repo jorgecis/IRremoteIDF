@@ -22,3 +22,9 @@ test/*_test
 # Python
 __pycache__/
 *.pyc
+
+# Component packing
+dist/
+
+# Doxygen output
+docs/doxygen/

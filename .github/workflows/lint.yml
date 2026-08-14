@@ -1,0 +1,53 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  cpplint:
+    name: cpplint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Install
+        run: pip install cpplint
+      - name: Run
+        # Style rules come from CPPLINT.cfg (and the per-directory ones in
+        # include/ and src/), matching the upstream IRremoteESP8266 settings.
+        run: cpplint --recursive --quiet src include
+
+  python:
+    name: Python tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Install
+        run: pip install flake8
+      - name: Run
+        run: flake8 --max-line-length 100 tools/
+
+  yaml:
+    name: YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Install
+        run: pip install yamllint
+      - name: Run
+        run: |
+          yamllint -d "{extends: default, rules: {line-length: {max: 120}, \
+            truthy: {check-keys: false}, document-start: disable, \
+            comments: {min-spaces-from-content: 1}}}" \
+            .github/workflows idf_component.yml examples/*/main/idf_component.yml

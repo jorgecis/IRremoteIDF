@@ -39,6 +39,27 @@ jobs:
           idf.py set-target ${{ matrix.target }}
           idf.py build
 
+  all-targets:
+    # Every chip listed under `targets:` in idf_component.yml must build, or
+    # the manifest is lying to whoever installs from the registry.
+    name: ir_receive_dump on ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [esp32, esp32s2, esp32s3, esp32c2, esp32c3, esp32c5,
+                 esp32c6, esp32h2, esp32p4]
+    container: espressif/idf:release-v5.5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_receive_dump
+          idf.py set-target ${{ matrix.target }}
+          idf.py build
+
   build-options:
     name: Non-default build options
     runs-on: ubuntu-latest
@@ -52,6 +73,14 @@ jobs:
           cd examples/ir_send_demo
           echo "CONFIG_IRREMOTE_TX_HW_CARRIER=y" > sdkconfig.defaults
           idf.py set-target esp32
+          idf.py build
+      - name: Hardware carrier on a target with few LEDC channels
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_send_demo
+          rm -rf build sdkconfig
+          idf.py set-target esp32h2
           idf.py build
       - name: Debug tracing and a non-default locale
         shell: bash
@@ -72,6 +101,21 @@ jobs:
             > sdkconfig.defaults
           idf.py set-target esp32
           idf.py build
+
+  manifest:
+    name: Component manifest packs cleanly
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v5.5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pack
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          # Validates idf_component.yml and the `examples:` paths without
+          # needing a registry token. Catches manifest errors before tagging.
+          compote component pack --name IRremoteIDF
+          ls -l dist/
 
   generated-files:
     name: Kconfig is up to date
