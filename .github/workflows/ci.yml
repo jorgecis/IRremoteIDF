@@ -11,7 +11,7 @@ jobs:
     name: Host unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fetch googletest
         run: |
           git clone -b v1.12.x --depth 1 \
@@ -30,7 +30,7 @@ jobs:
         example: [ir_send_demo, ir_receive_dump, ac_control, ir_repeater]
     container: espressif/idf:release-${{ matrix.idf }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         shell: bash
         run: |
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     container: espressif/idf:release-v5.5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Hardware carrier
         shell: bash
         run: |
@@ -77,7 +77,7 @@ jobs:
     name: Kconfig is up to date
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Regenerate and diff
         run: |
           python3 tools/gen_kconfig.py
