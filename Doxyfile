@@ -16,7 +16,6 @@ EXTRACT_LOCAL_CLASSES  = NO
 GENERATE_LATEX         = NO
 ENABLE_PREPROCESSING   = NO
 QUIET                  = YES
-# Upstream builds docs with WARN_AS_ERROR. Left off here so a missing
-# docblock can't turn the whole pipeline red.
+# The tree generates zero doxygen warnings today, so keep it that way.
 WARN_NO_PARAMDOC       = YES
-WARN_AS_ERROR          = NO
+WARN_AS_ERROR          = YES

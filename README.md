@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/jorgecis/IRremoteIDF/actions/workflows/ci.yml/badge.svg)](https://github.com/jorgecis/IRremoteIDF/actions/workflows/ci.yml)
 [![Lint](https://github.com/jorgecis/IRremoteIDF/actions/workflows/lint.yml/badge.svg)](https://github.com/jorgecis/IRremoteIDF/actions/workflows/lint.yml)
+[![Docs](https://github.com/jorgecis/IRremoteIDF/actions/workflows/docs.yml/badge.svg)](https://jorgecis.github.io/IRremoteIDF/)
 [![Component Registry](https://components.espressif.com/components/jorgecis/irremoteidf/badge.svg)](https://components.espressif.com/components/jorgecis/irremoteidf)
 
 Send and receive infrared (IR) signals from ESP-IDF.
@@ -159,12 +160,12 @@ make -C test run
 | --- | --- | --- |
 | `ci.yml` | push, PR | Host unit tests; the 4 examples on esp32/s3/c3 against IDF 5.1 and 5.5; `ir_receive_dump` on all 9 declared targets; the LEDC carrier, debug, locale and minimal-protocol build options; that `compote component pack` accepts the manifest; that `Kconfig` matches the generator. |
 | `lint.yml` | push, PR | cpplint over `src/` and `include/` with the upstream style rules, flake8 over `tools/`, yamllint over the manifests and workflows. |
-| `docs.yml` | push to main | Doxygen, published to GitHub Pages. |
+| `docs.yml` | push to main | Doxygen (warnings are errors), published to [GitHub Pages](https://jorgecis.github.io/IRremoteIDF/). |
 | `release.yml` | tag `v*` | Checks the tag matches `idf_component.yml`, then cuts a GitHub Release from the matching `CHANGELOG.md` section. |
 | `publish.yml` | tag `v*` | Uploads the component to the ESP Component Registry. |
 
-`docs.yml` needs Pages set to build from "GitHub Actions" in the repository
-settings; `publish.yml` needs an `IDF_COMPONENT_API_TOKEN` secret.
+`publish.yml` needs an `IDF_COMPONENT_API_TOKEN` secret, generated from your
+account on [components.espressif.com](https://components.espressif.com).
 
 ## Differences from IRremoteESP8266
 
