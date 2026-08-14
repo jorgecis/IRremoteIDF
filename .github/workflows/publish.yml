@@ -1,0 +1,21 @@
+name: Publish to the ESP Component Registry
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload component
+        uses: espressif/upload-components-ci-action@v1
+        with:
+          # Must match the namespace/name registered at
+          # https://components.espressif.com
+          name: IRremoteIDF
+          namespace: jorgecis
+          version: ${{ github.ref_name }}
+          api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}

@@ -1,0 +1,24 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+sdkconfig.defaults
+managed_components/
+dependencies.lock
+
+# Host unit tests
+lib/googletest/
+test/*.o
+test/*.a
+test/*_test
+!test/*_test.cpp
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc

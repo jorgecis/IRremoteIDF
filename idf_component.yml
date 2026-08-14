@@ -1,0 +1,41 @@
+version: "1.0.0"
+description: >-
+  Send and receive infrared (IR) signals on ESP-IDF. Supports 130 consumer IR
+  protocols, including full state/climate control for 60+ air conditioner
+  brands. Ported from IRremoteESP8266.
+url: https://github.com/jorgecis/IRremoteIDF
+repository: https://github.com/jorgecis/IRremoteIDF.git
+documentation: https://github.com/jorgecis/IRremoteIDF#readme
+issues: https://github.com/jorgecis/IRremoteIDF/issues
+license: LGPL-2.1-only
+tags:
+  - infrared
+  - remote-control
+  - hvac
+  - air-conditioner
+  - climate
+  - ledc
+dependencies:
+  idf:
+    version: ">=5.0"
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32c2
+  - esp32c3
+  - esp32c5
+  - esp32c6
+  - esp32h2
+  - esp32p4
+examples:
+  - path: examples/ir_receive_dump
+  - path: examples/ir_send_demo
+  - path: examples/ac_control
+  - path: examples/ir_repeater
+files:
+  exclude:
+    - "lib/**/*"
+    - "test/**/*"
+    - "tools/**/*"
+    - ".github/**/*"

@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Host unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch googletest
+        run: |
+          git clone -b v1.12.x --depth 1 \
+            https://github.com/google/googletest.git lib/googletest
+      - name: Build and run
+        run: make -C test -j"$(nproc)" run
+
+  build-examples:
+    name: ${{ matrix.example }} on ${{ matrix.target }} (IDF ${{ matrix.idf }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        idf: ["v5.5", "v5.1"]
+        target: [esp32, esp32s3, esp32c3]
+        example: [ir_send_demo, ir_receive_dump, ac_control, ir_repeater]
+    container: espressif/idf:release-${{ matrix.idf }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/${{ matrix.example }}
+          idf.py set-target ${{ matrix.target }}
+          idf.py build
+
+  build-options:
+    name: Non-default build options
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v5.5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hardware carrier
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_send_demo
+          echo "CONFIG_IRREMOTE_TX_HW_CARRIER=y" > sdkconfig.defaults
+          idf.py set-target esp32
+          idf.py build
+      - name: Debug tracing and a non-default locale
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_receive_dump
+          printf 'CONFIG_IRREMOTE_DEBUG=y\nCONFIG_IRREMOTE_LOCALE_ES_ES=y\n' \
+            > sdkconfig.defaults
+          idf.py set-target esp32
+          idf.py build
+      - name: Minimal protocol set
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_receive_dump
+          rm -rf build sdkconfig
+          printf 'CONFIG_IRREMOTE_ENABLE_ALL_PROTOCOLS=n\nCONFIG_IRREMOTE_DECODE_NEC=y\nCONFIG_IRREMOTE_SEND_NEC=y\n' \
+            > sdkconfig.defaults
+          idf.py set-target esp32
+          idf.py build
+
+  generated-files:
+    name: Kconfig is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate and diff
+        run: |
+          python3 tools/gen_kconfig.py
+          git diff --exit-code Kconfig include/IRconfig.h
