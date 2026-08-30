@@ -21,8 +21,17 @@ static const ledc_mode_t kMode = LEDC_LOW_SPEED_MODE;
 
 namespace {
 /// Per-channel bookkeeping. Index == LEDC channel number.
+///
+/// A slot is keyed by GPIO and reference counted, because more than one
+/// IRsend can legitimately share a pin. IRac is the case that forces it: it
+/// keeps only a pin number and builds a throw-away protocol object - each
+/// with its own IRsend - for every message it sends. Handing each of those a
+/// channel of its own would re-route the pad to the newest one, silently
+/// killing whichever long-lived IRsend the caller was still using, and would
+/// run the eight channels out after eight messages.
 struct CarrierSlot {
-  bool used;
+  uint16_t refs;     ///< How many IRsend instances hold this channel.
+  uint16_t pin;      ///< The GPIO it drives. Only meaningful while refs > 0.
   ledc_timer_t timer;
   uint32_t on_duty;  ///< Duty register value that produces the carrier.
 };
@@ -51,12 +60,21 @@ int8_t irCarrierAttach(uint16_t pin, bool inverted) {
   int8_t channel = -1;
   int timer = -1;
   portENTER_CRITICAL(&alloc_mux);
+  // An existing channel for this pin is shared rather than duplicated.
+  for (int i = 0; i < LEDC_CHANNEL_MAX; i++) {
+    if (slots[i].refs && slots[i].pin == pin) {
+      slots[i].refs++;
+      portEXIT_CRITICAL(&alloc_mux);
+      return static_cast<int8_t>(i);
+    }
+  }
   for (int i = 0; i < LEDC_CHANNEL_MAX && channel < 0; i++)
-    if (!slots[i].used) channel = static_cast<int8_t>(i);
+    if (!slots[i].refs) channel = static_cast<int8_t>(i);
   for (int i = 0; i < LEDC_TIMER_MAX && timer < 0; i++)
     if (!timer_used[i]) timer = i;
   if (channel >= 0 && timer >= 0) {
-    slots[channel].used = true;
+    slots[channel].refs = 1;
+    slots[channel].pin = pin;
     slots[channel].timer = static_cast<ledc_timer_t>(timer);
     slots[channel].on_duty = 0;
     timer_used[timer] = true;
@@ -94,11 +112,18 @@ int8_t irCarrierAttach(uint16_t pin, bool inverted) {
 
 void irCarrierDetach(int8_t channel, uint16_t pin, bool inverted) {
   if (channel < 0 || channel >= LEDC_CHANNEL_MAX) return;
-  ledc_stop(kMode, static_cast<ledc_channel_t>(channel), inverted ? 1 : 0);
   portENTER_CRITICAL(&alloc_mux);
-  timer_used[slots[channel].timer] = false;
-  slots[channel].used = false;
+  const bool last = slots[channel].refs <= 1;
+  if (last) {
+    timer_used[slots[channel].timer] = false;
+    slots[channel].refs = 0;
+  } else {
+    slots[channel].refs--;
+  }
   portEXIT_CRITICAL(&alloc_mux);
+  // Another IRsend is still using this pin: leave the peripheral alone.
+  if (!last) return;
+  ledc_stop(kMode, static_cast<ledc_channel_t>(channel), inverted ? 1 : 0);
   irGpioOutput(pin);
   irGpioWrite(pin, inverted ? kIrHigh : kIrLow);
 }

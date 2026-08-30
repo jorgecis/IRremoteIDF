@@ -51,6 +51,10 @@ IRsend::IRsend(uint16_t IRsendPin, bool inverted, bool use_modulation)
     _dutycycle = kDutyMax;
 }
 
+/// Release anything begin() claimed.
+/// @see IRsend::end()
+IRsend::~IRsend() { end(); }
+
 /// Enable the pin for output.
 void IRsend::begin() {
 #ifndef UNIT_TEST

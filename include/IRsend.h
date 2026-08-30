@@ -257,6 +257,10 @@ class IRsend {
  public:
   explicit IRsend(uint16_t IRsendPin, bool inverted = false,
                   bool use_modulation = true);
+  /// Releases whatever begin() claimed. It matters for the hardware carrier:
+  /// IRac builds a throw-away sender per message, and without this their
+  /// LEDC references would never be given back.
+  ~IRsend();
   void begin();
   void end();
   void enableIROut(uint32_t freq, uint8_t duty = kDutyDefault);
