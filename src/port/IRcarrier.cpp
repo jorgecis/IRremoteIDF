@@ -15,6 +15,8 @@
 #include "freertos/FreeRTOS.h"
 
 static const char *kTag = "irremote.carrier";
+/// The LEDC driver's own log tag, muted while probing for a resolution.
+static const char *kLedcTag = "ledc";
 
 /// Low speed mode exists on every LEDC-equipped target.
 static const ledc_mode_t kMode = LEDC_LOW_SPEED_MODE;
@@ -34,6 +36,8 @@ struct CarrierSlot {
   uint16_t pin;      ///< The GPIO it drives. Only meaningful while refs > 0.
   ledc_timer_t timer;
   uint32_t on_duty;  ///< Duty register value that produces the carrier.
+  uint32_t freq;     ///< What the timer is currently programmed for, 0 if new.
+  uint8_t duty_pct;  ///< The duty irCarrierConfig() was last given.
 };
 
 CarrierSlot slots[LEDC_CHANNEL_MAX];
@@ -42,17 +46,28 @@ portMUX_TYPE alloc_mux = portMUX_INITIALIZER_UNLOCKED;
 
 /// Program `timer` for `freq`, using the highest duty resolution it accepts.
 /// @return The resolution in bits, or 0 if the frequency is unreachable.
+///
+/// The search walks down from the maximum because the achievable resolution
+/// depends on the clock the driver picks, which is not knowable from here.
+/// Each rejected step logs at ESP_LOG_ERROR ("cannot be achieved"), so the
+/// driver's own tag is muted for the duration: those lines are a description
+/// of the search, not of a fault, and a caller reading the log has no way to
+/// tell them from a real failure.
 uint8_t configureTimer(ledc_timer_t timer, uint32_t freq) {
-  for (int bits = LEDC_TIMER_BIT_MAX - 1; bits >= 3; bits--) {
+  const esp_log_level_t previous = esp_log_level_get(kLedcTag);
+  esp_log_level_set(kLedcTag, ESP_LOG_NONE);
+  uint8_t found = 0;
+  for (int bits = LEDC_TIMER_BIT_MAX - 1; bits >= 3 && !found; bits--) {
     ledc_timer_config_t cfg = {};
     cfg.speed_mode = kMode;
     cfg.duty_resolution = static_cast<ledc_timer_bit_t>(bits);
     cfg.timer_num = timer;
     cfg.freq_hz = freq;
     cfg.clk_cfg = LEDC_AUTO_CLK;
-    if (ledc_timer_config(&cfg) == ESP_OK) return static_cast<uint8_t>(bits);
+    if (ledc_timer_config(&cfg) == ESP_OK) found = static_cast<uint8_t>(bits);
   }
-  return 0;
+  esp_log_level_set(kLedcTag, previous);
+  return found;
 }
 }  // namespace
 
@@ -77,6 +92,8 @@ int8_t irCarrierAttach(uint16_t pin, bool inverted) {
     slots[channel].pin = pin;
     slots[channel].timer = static_cast<ledc_timer_t>(timer);
     slots[channel].on_duty = 0;
+    slots[channel].freq = 0;  // Force the next irCarrierConfig() to program it.
+    slots[channel].duty_pct = 0;
     timer_used[timer] = true;
   }
   portEXIT_CRITICAL(&alloc_mux);
@@ -130,6 +147,14 @@ void irCarrierDetach(int8_t channel, uint16_t pin, bool inverted) {
 
 void irCarrierConfig(int8_t channel, uint32_t freq, uint8_t duty) {
   if (channel < 0 || channel >= LEDC_CHANNEL_MAX) return;
+  // enableIROut() runs before every transmission and almost always asks for
+  // the same 38kHz it asked for last time. Reprogramming the timer for that
+  // costs a divider recalculation and a peripheral write per message, for no
+  // change; the carrier only has to be put back to its off state.
+  if (slots[channel].freq == freq && slots[channel].duty_pct == duty) {
+    irCarrierOff(channel);
+    return;
+  }
   const uint8_t resolution = configureTimer(slots[channel].timer, freq);
   if (!resolution) {
     ESP_LOGW(kTag, "Carrier frequency %" PRIu32 " Hz is out of range", freq);
@@ -139,6 +164,8 @@ void irCarrierConfig(int8_t channel, uint32_t freq, uint8_t duty) {
   uint32_t value = (duty >= 100) ? full : (full * duty) / 100;
   if (!value && duty) value = 1;  // Never round a non-zero duty away.
   slots[channel].on_duty = value;
+  slots[channel].freq = freq;
+  slots[channel].duty_pct = duty;
   irCarrierOff(channel);  // The carrier stays off until mark() asks for it.
 }
 
