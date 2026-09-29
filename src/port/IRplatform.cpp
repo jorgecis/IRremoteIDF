@@ -39,7 +39,8 @@ void irDelayMs(uint32_t msec) {
   // which is enough to truncate the long inter-frame gaps of protocols like
   // Kelvinator/Gree and get the frame rejected. Work against an absolute
   // deadline instead: sleep only the ticks guaranteed to fit, then busy-wait.
-  const int64_t deadline = esp_timer_get_time() + static_cast<int64_t>(msec) * 1000;
+  const int64_t deadline =
+      esp_timer_get_time() + static_cast<int64_t>(msec) * 1000;
   const int64_t tick_us = static_cast<int64_t>(portTICK_PERIOD_MS) * 1000;
   for (;;) {
     const int64_t remaining = deadline - esp_timer_get_time();
