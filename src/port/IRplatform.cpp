@@ -33,15 +33,22 @@ void IRAM_ATTR irDelayUs(uint32_t usec) {
 }
 
 void irDelayMs(uint32_t msec) {
-  // Hand whole scheduler ticks back to FreeRTOS so the watchdog stays happy,
-  // then busy-wait the sub-tick remainder so the timing stays accurate.
-  const uint32_t tick_ms = portTICK_PERIOD_MS;
-  if (msec >= tick_ms) {
-    const uint32_t ticks = msec / tick_ms;
-    vTaskDelay(ticks);
-    msec -= ticks * tick_ms;
+  // vTaskDelay(n) wakes on the n-th tick *edge*, not n ticks after the call,
+  // so a plain msec/tick conversion can come up short by almost a full tick.
+  // Arduino runs a 1 ms tick and never noticed; ESP-IDF defaults to 10 ms,
+  // which is enough to truncate the long inter-frame gaps of protocols like
+  // Kelvinator/Gree and get the frame rejected. Work against an absolute
+  // deadline instead: sleep only the ticks guaranteed to fit, then busy-wait.
+  const int64_t deadline = esp_timer_get_time() + static_cast<int64_t>(msec) * 1000;
+  const int64_t tick_us = static_cast<int64_t>(portTICK_PERIOD_MS) * 1000;
+  for (;;) {
+    const int64_t remaining = deadline - esp_timer_get_time();
+    if (remaining < 2 * tick_us) break;
+    // One tick less than would fit, since the first edge may be imminent.
+    vTaskDelay(static_cast<TickType_t>(remaining / tick_us - 1));
   }
-  if (msec) irDelayUs(msec * 1000UL);
+  const int64_t remaining = deadline - esp_timer_get_time();
+  if (remaining > 0) irDelayUs(static_cast<uint32_t>(remaining));
 }
 
 void irYield(void) { taskYIELD(); }

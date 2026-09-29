@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+* Fix long inter-frame spaces (over 16 ms) coming out up to one FreeRTOS
+  tick short. `vTaskDelay()` wakes on a tick edge, so on the default 10 ms
+  tick a 20 ms gap could shrink to 11 ms and protocols with long gaps
+  (Kelvinator/Gree, among others) were rejected after the first frame.
+  Delays now run against an `esp_timer` deadline: whole ticks are still
+  yielded, the remainder is busy-waited.
+
 ## 1.0.0
 
 Initial release. ESP-IDF port of

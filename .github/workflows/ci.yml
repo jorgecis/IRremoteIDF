@@ -71,7 +71,7 @@ jobs:
         run: |
           . "${IDF_PATH}/export.sh"
           cd examples/ir_send_demo
-          echo "CONFIG_IRREMOTE_TX_HW_CARRIER=y" > sdkconfig.defaults
+          echo "CONFIG_IRREMOTE_TX_HW_CARRIER=y" >> sdkconfig.defaults
           idf.py set-target esp32
           idf.py build
       - name: Hardware carrier on a target with few LEDC channels
@@ -88,7 +88,7 @@ jobs:
           . "${IDF_PATH}/export.sh"
           cd examples/ir_receive_dump
           printf 'CONFIG_IRREMOTE_DEBUG=y\nCONFIG_IRREMOTE_LOCALE_ES_ES=y\n' \
-            > sdkconfig.defaults
+            >> sdkconfig.defaults
           idf.py set-target esp32
           idf.py build
       - name: Minimal protocol set
@@ -96,9 +96,9 @@ jobs:
         run: |
           . "${IDF_PATH}/export.sh"
           cd examples/ir_receive_dump
-          rm -rf build sdkconfig
+          rm -rf build sdkconfig && sed -i "/^CONFIG_IRREMOTE_/d" sdkconfig.defaults
           printf 'CONFIG_IRREMOTE_ENABLE_ALL_PROTOCOLS=n\nCONFIG_IRREMOTE_DECODE_NEC=y\nCONFIG_IRREMOTE_SEND_NEC=y\n' \
-            > sdkconfig.defaults
+            >> sdkconfig.defaults
           idf.py set-target esp32
           idf.py build
 

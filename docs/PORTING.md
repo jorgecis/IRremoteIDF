@@ -20,7 +20,7 @@ the library used to get from the Arduino core:
 | --- | --- |
 | `String` | `std::string` (the library only ever used the shared subset) |
 | `millis()` / `micros()` | `esp_timer_get_time()` |
-| `delay()` | `vTaskDelay()` for whole ticks + busy-wait for the remainder |
+| `delay()` | `esp_timer` deadline: `vTaskDelay()` for the ticks that surely fit + busy-wait to the deadline |
 | `delayMicroseconds()` | `esp_rom_delay_us()` |
 | `pinMode()` / `digitalWrite()` / `digitalRead()` | `gpio_config()` / `gpio_set_level()` / `gpio_get_level()` |
 | `F()` / `PROGMEM` / `FPSTR()` | no-ops; ESP-IDF maps constants to flash already |

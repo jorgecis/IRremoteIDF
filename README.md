@@ -60,6 +60,25 @@ extern "C" void app_main(void) {
 Pick a GPIO that is free at boot. GPIO 14 is a poor choice on the ESP32-C3
 (strapping); GPIO 10 works there.
 
+### Transmit timing
+
+Transmit is bit-banged from the calling task, so the frame is only as clean
+as that task's timing. Three settings matter, and the examples ship the
+first one in their `sdkconfig.defaults`:
+
+* **`CONFIG_FREERTOS_HZ=1000`** (default 100). Spaces longer than 16 ms yield
+  whole ticks to the scheduler and busy-wait the rest, so the tick sets the
+  busy-wait tail before the next mark; 1 ms is what Arduino uses. The frame
+  timing is correct at 100 Hz too, but protocols with long gaps
+  (Kelvinator/Gree, Daikin, Mitsubishi...) spend up to 20 ms spinning
+  per gap.
+* **`CONFIG_IRREMOTE_TX_HW_CARRIER=y`**. Without it the 38 kHz carrier is
+  toggled in software, and its shape depends on the optimisation level and on
+  anything that preempts the task mid-mark.
+* Do not do other work from the sending task while a frame is on the air:
+  no logging, no LED updates, no RMT. Anything that blocks mid-frame
+  stretches a mark or a space. Do it before or after `send()`.
+
 ## Receiving
 
 ```cpp
