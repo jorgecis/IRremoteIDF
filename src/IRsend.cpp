@@ -33,7 +33,7 @@ std::vector<int> timingList;
 ///  i.e. If not, assume a 100% duty cycle. Ignore attempts to change the
 ///  duty cycle etc.
 IRsend::IRsend(uint16_t IRsendPin, bool inverted, bool use_modulation)
-    : IRpin(IRsendPin), periodOffset(kPeriodOffset) {
+    : IRpin(IRsendPin), periodOffset(kPeriodOffset), _begun(false) {
 #if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_HW_CARRIER)
   _carrier = -1;
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
@@ -58,16 +58,26 @@ IRsend::~IRsend() { end(); }
 /// Enable the pin for output.
 void IRsend::begin() {
 #ifndef UNIT_TEST
-  irGpioOutput(IRpin);
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
+  // ledc_channel_config() claims the pad itself. Configuring it as a plain
+  // GPIO first would unroute the channel another IRsend on this pin is
+  // already using, silencing both, so that is only the software fallback.
   if (_carrier < 0) _carrier = irCarrierAttach(IRpin, outputOn == LOW);
+  if (_carrier < 0) irGpioOutput(IRpin);
+#else
+  irGpioOutput(IRpin);
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
 #endif
+  _begun = true;
   ledOff();  // Ensure the LED is in a known safe state when we start.
 }
 
 /// Release the GPIO (and any hardware carrier) used for sending.
 void IRsend::end() {
+  // Objects built only to decode or describe a message (IRac, with
+  // kGpioUnused) never called begin() and have no pin to put back.
+  if (!_begun) return;
+  _begun = false;
 #ifndef UNIT_TEST
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
   if (_carrier >= 0) {

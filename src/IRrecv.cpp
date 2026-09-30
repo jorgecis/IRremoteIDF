@@ -184,7 +184,14 @@ void IRrecv::enableIRIn(const bool pullup) {
 
   // The GPIO ISR service is shared process-wide. Remember whether we were the
   // ones who installed it, so we don't uninstall someone else's.
+  // "Already installed" is a normal outcome here - the application may own
+  // the service, or enableIRIn() may be called again - but the driver logs it
+  // at ESP_LOG_ERROR. Mute its tag for the call; real failures are logged
+  // below.
+  const esp_log_level_t gpio_log = esp_log_level_get("gpio");
+  esp_log_level_set("gpio", ESP_LOG_NONE);
   const esp_err_t installed = gpio_install_isr_service(0);
+  esp_log_level_set("gpio", gpio_log);
   if (installed == ESP_OK) {
     isr_service_ours = true;
   } else if (installed != ESP_ERR_INVALID_STATE) {

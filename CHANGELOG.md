@@ -8,6 +8,18 @@
   (Kelvinator/Gree, among others) were rejected after the first frame.
   Delays now run against an `esp_timer` deadline: whole ticks are still
   yielded, the remainder is busy-waited.
+* Fix the LEDC carrier going silent when two senders share a pin (two
+  `IRsend`s, or an `IRsend` plus IRac's per-message objects). The second
+  `begin()` reconfigured the pad as a plain GPIO, unrouting the shared
+  channel. With the carrier enabled the pad is now left to the LEDC driver.
+* Build on ESP-IDF 6: require `esp_driver_gpio`/`esp_driver_ledc` directly
+  on IDF 5.3 and later, since `driver` no longer pulls them in. CI now
+  builds the examples on IDF 6.0 too.
+* Stop logging `gpio_set_level ... GPIO output gpio_num error` when IRac
+  describes a received message: senders that never called `begin()` no
+  longer touch a pin on destruction.
+* Stop logging `GPIO isr service already installed` when the application
+  installs the service itself or calls `enableIRIn()` more than once.
 
 ## 1.0.0
 

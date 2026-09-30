@@ -114,7 +114,6 @@ int8_t irCarrierAttach(uint16_t pin, bool inverted) {
   cfg.gpio_num = pin;
   cfg.speed_mode = kMode;
   cfg.channel = static_cast<ledc_channel_t>(channel);
-  cfg.intr_type = LEDC_INTR_DISABLE;
   cfg.timer_sel = slots[channel].timer;
   cfg.duty = 0;  // Idle: no carrier.
   cfg.hpoint = 0;
