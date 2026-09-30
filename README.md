@@ -177,14 +177,23 @@ make -C test run
 
 | Workflow | Runs on | What it checks |
 | --- | --- | --- |
-| `ci.yml` | push, PR | Host unit tests; the 4 examples on esp32/s3/c3 against IDF 5.1 and 5.5; `ir_receive_dump` on all 9 declared targets; the LEDC carrier, debug, locale and minimal-protocol build options; that `compote component pack` accepts the manifest; that `Kconfig` matches the generator. |
+| `ci.yml` | push, PR | Host unit tests; the 4 examples on esp32/s3/c3 against IDF 5.1, 5.5 and 6.0; `ir_receive_dump` on all 9 declared targets; the LEDC carrier, debug, locale and minimal-protocol build options; that `compote component pack` accepts the manifest; that `Kconfig` matches the generator. |
 | `lint.yml` | push, PR | cpplint over `src/` and `include/` with the upstream style rules, flake8 over `tools/`, yamllint over the manifests and workflows. |
 | `docs.yml` | push to main | Doxygen (warnings are errors), published to [GitHub Pages](https://jorgecis.github.io/IRremoteIDF/). |
-| `release.yml` | tag `v*` | Checks the tag matches `idf_component.yml`, then cuts a GitHub Release from the matching `CHANGELOG.md` section. |
-| `publish.yml` | tag `v*` | Uploads the component to the ESP Component Registry. |
+| `release.yml` | tag `v*` | Checks the tag matches `idf_component.yml` and has a `CHANGELOG.md` section, uploads the component to the ESP Component Registry, then cuts a GitHub Release from that section. Safe to re-run: a version already published or a release already created is skipped. |
 
-`publish.yml` needs an `IDF_COMPONENT_API_TOKEN` secret, generated from your
+`release.yml` needs an `IDF_COMPONENT_API_TOKEN` secret, generated from your
 account on [components.espressif.com](https://components.espressif.com).
+
+To release, bump `version:` in `idf_component.yml`, rename `## Unreleased` in
+`CHANGELOG.md` to the same version, merge, then push a tag from `main`:
+
+```sh
+git tag -s v1.0.1 -m v1.0.1 && git push origin v1.0.1
+```
+
+Pushing the tag is the whole release; there is no need to draft it in the
+GitHub web UI.
 
 ## Differences from IRremoteESP8266
 

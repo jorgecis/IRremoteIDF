@@ -1,31 +1,48 @@
 name: Release
 
+# One workflow, three jobs in order: validate the tag, upload to the ESP
+# Component Registry, then create the GitHub release. The registry upload is
+# the irreversible step, so nothing reaches it unless the checks passed, and
+# every job is safe to re-run: a version already on the registry or a release
+# already on GitHub (e.g. one drafted in the web UI) is left as it is.
+
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release"
+        description: "Existing tag to release, e.g. v1.0.1"
         required: true
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
-  release:
-    name: Create GitHub release
+  check:
+    name: Check tag, manifest and changelog
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ env.TAG }}
 
       - name: Work out the version
         id: version
         run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "'${TAG}' is not a vX.Y.Z tag." >&2
+            exit 1
+          fi
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Check the tag matches idf_component.yml
@@ -52,10 +69,61 @@ jobs:
           fi
           cat release-notes.md
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  publish:
+    name: Upload to the ESP Component Registry
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Skip if this version is already published
+        id: registry
+        run: |
+          VERSIONS=$(curl -fsS \
+            https://components.espressif.com/api/components/jorgecis/irremoteidf \
+            | jq -r '.versions[].version')
+          if grep -qx "${{ needs.check.outputs.version }}" <<< "${VERSIONS}"; then
+            echo "::notice::${{ needs.check.outputs.version }} is already on" \
+                 "the registry; versions there are immutable, skipping."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload component
+        if: steps.registry.outputs.exists != 'true'
+        uses: espressif/upload-components-ci-action@v1
+        with:
+          # Must match the namespace/name registered at
+          # https://components.espressif.com
+          name: IRremoteIDF
+          namespace: jorgecis
+          version: ${{ env.TAG }}
+          api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
+
+  release:
+    name: Create GitHub release
+    needs: [check, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --notes-file release-notes.md
+          if gh release view "${TAG}" -R "${{ github.repository }}" \
+               > /dev/null 2>&1; then
+            echo "::notice::Release ${TAG} already exists (created by hand?);" \
+                 "leaving its notes untouched."
+            exit 0
+          fi
+          gh release create "${TAG}" -R "${{ github.repository }}" \
+            --verify-tag --title "${TAG}" --notes-file release-notes.md
