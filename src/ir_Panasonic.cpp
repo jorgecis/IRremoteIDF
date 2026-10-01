@@ -1025,9 +1025,9 @@ bool IRrecv::decodePanasonicAC32(decode_results *results, uint16_t offset,
   uint32_t prev_section_data;
 
   // Match all the expected data blocks.
-  for (uint16_t block = 0;
-       block < sections * blocks_per_section;
-       block++) {
+  const uint32_t total_blocks =
+      static_cast<uint32_t>(sections) * blocks_per_section;
+  for (uint32_t block = 0; block < total_blocks; block++) {
     prev_section_data = section_data;
     uint16_t used = matchGeneric(results->rawbuf + offset, &section_data,
                                  results->rawlen - offset, bits_per_block * 2,

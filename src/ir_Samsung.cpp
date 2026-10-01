@@ -459,7 +459,7 @@ void IRSamsungAc::setRaw(const uint8_t new_code[], const uint16_t length) {
     _Sleep = _.Sleep5 && _.Sleep12;
     _OnTimer = _getOnTimer();
     _OffTimer = _getOffTimer();
-    for (uint8_t i = kSamsungAcStateLength; i < length; i++)
+    for (uint16_t i = kSamsungAcStateLength; i < length; i++)
       _.raw[i - kSamsungAcSectionLength] = _.raw[i];
   }
 }
@@ -962,7 +962,7 @@ bool IRrecv::decodeSamsungAC(decode_results *results, uint16_t offset,
   if (!matchMark(results->rawbuf[offset++], kSamsungAcBitMark)) return false;
   if (!matchSpace(results->rawbuf[offset++], kSamsungAcHdrSpace)) return false;
   // Section(s)
-  for (uint16_t pos = 0; pos <= (nbits / 8) - kSamsungAcSectionLength;
+  for (uint16_t pos = 0; pos + kSamsungAcSectionLength <= nbits / 8;
        pos += kSamsungAcSectionLength) {
     uint16_t used;
     // Section Header + Section Data (7 bytes) + Section Footer
