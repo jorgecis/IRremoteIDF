@@ -144,7 +144,7 @@ String typeToString(const decode_type_t protocol, const bool isRepeat) {
     result = kUnknownStr;
   } else {
     auto *ptr = reinterpret_cast<const char*>(kAllProtocolNamesStr);
-    for (uint16_t i = 0; i <= protocol && STRLEN(ptr); i++) {
+    for (int i = 0; i <= protocol && STRLEN(ptr); i++) {
       if (i == protocol) {
         result = FPSTR(ptr);
         break;

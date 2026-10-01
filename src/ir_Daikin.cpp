@@ -200,7 +200,7 @@ void IRDaikinESP::setRaw(const uint8_t new_code[], const uint16_t length) {
     offset = kDaikinStateLength - kDaikinStateLengthShort;
     stateReset();
   }
-  for (uint8_t i = 0; i < length && i < kDaikinStateLength; i++)
+  for (uint16_t i = 0; i < length && i < kDaikinStateLength; i++)
     _.raw[i + offset] = new_code[i];
 }
 

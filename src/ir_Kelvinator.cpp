@@ -164,10 +164,10 @@ uint8_t IRKelvinatorAC::calcBlockChecksum(const uint8_t *block,
                                           const uint16_t length) {
   uint8_t sum = kKelvinatorChecksumStart;
   // Sum the lower half of the first 4 bytes of this block.
-  for (uint8_t i = 0; i < 4 && i < length - 1; i++, block++)
+  for (uint16_t i = 0; i < 4 && i + 1 < length; i++, block++)
     sum += (*block & 0b1111);
   // then sum the upper half of the next 3 bytes.
-  for (uint8_t i = 4; i < length - 1; i++, block++) sum += (*block >> 4);
+  for (uint16_t i = 4; i + 1 < length; i++, block++) sum += (*block >> 4);
   // Trim it down to fit into the 4 bits allowed. i.e. Mod 16.
   return sum & 0b1111;
 }
