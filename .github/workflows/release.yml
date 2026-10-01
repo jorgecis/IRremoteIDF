@@ -15,8 +15,9 @@ on:
         description: "Existing tag to release, e.g. v1.0.1"
         required: true
 
+# Only the release job writes; check and publish get a read-only token.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
@@ -110,6 +111,8 @@ jobs:
     name: Create GitHub release
     needs: [check, publish]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:

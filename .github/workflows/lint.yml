@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only token: these jobs only read the repository.
+permissions:
+  contents: read
+
 jobs:
   cpplint:
     name: cpplint
