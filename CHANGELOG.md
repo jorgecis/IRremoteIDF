@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1
 
 * Fix long inter-frame spaces (over 16 ms) coming out up to one FreeRTOS
   tick short. `vTaskDelay()` wakes on a tick edge, so on the default 10 ms

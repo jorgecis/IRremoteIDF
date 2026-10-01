@@ -27,7 +27,7 @@ GPIO, `esp_timer` and (optionally) LEDC.
 ### From the ESP Component Registry
 
 ```sh
-idf.py add-dependency "jorgecis/IRremoteIDF^1.0.0"
+idf.py add-dependency "jorgecis/IRremoteIDF^1.0.1"
 ```
 
 ### As a git submodule

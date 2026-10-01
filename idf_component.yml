@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 description: >-
   Send and receive infrared (IR) signals on ESP-IDF. Supports 130 consumer IR
   protocols, including full state/climate control for 60+ air conditioner
