@@ -1,7 +1,7 @@
 # IDF 5.3 split the monolithic "driver" component into esp_driver_*, and IDF 6
 # stopped "driver" from pulling them in, so name them directly where they exist.
 if(IDF_VERSION_MAJOR GREATER 5 OR IDF_VERSION_MINOR GREATER_EQUAL 3)
-    set(ir_drivers esp_driver_gpio esp_driver_ledc)
+    set(ir_drivers esp_driver_gpio esp_driver_ledc esp_driver_rmt)
 else()
     set(ir_drivers driver)
 endif()

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+* Add `CONFIG_IRREMOTE_TX_RMT`: transmit through the RMT peripheral. The
+  protocol code queues each frame and the hardware times its marks and
+  spaces and modulates the carrier, so the result no longer depends on the
+  sending task's scheduling and the CPU is free while a frame is on the air.
+  Off by default; it takes one RMT TX channel and 6 KB per pin. (#3)
+
 ## 1.0.1
 
 * Fix long inter-frame spaces (over 16 ms) coming out up to one FreeRTOS

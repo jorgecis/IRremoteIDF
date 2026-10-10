@@ -13,7 +13,7 @@ protocol decoder, encoder and air-conditioner state class is carried over
 unchanged, so the protocol behaviour is identical — the same 1669 unit tests
 from upstream run against this code and pass. What was rewritten is the layer
 underneath: the Arduino core dependency is gone, replaced by native ESP-IDF
-GPIO, `esp_timer` and (optionally) LEDC.
+GPIO, `esp_timer` and (optionally) RMT or LEDC.
 
 * **130 protocols**, most of them both send *and* decode.
 * **Full climate control** for 60+ A/C brands via the vendor-neutral `IRac`
@@ -62,9 +62,30 @@ Pick a GPIO that is free at boot. GPIO 14 is a poor choice on the ESP32-C3
 
 ### Transmit timing
 
-Transmit is bit-banged from the calling task, so the frame is only as clean
-as that task's timing. Three settings matter, and the examples ship the
-first one in their `sdkconfig.defaults`:
+There are two ways to put a frame on the air.
+
+**`CONFIG_IRREMOTE_TX_RMT=y`** hands each frame to an RMT channel, which
+times every mark and space and modulates the carrier in hardware. The timing
+no longer depends on the sending task, and the CPU is free while the frame
+plays: `send()` sleeps on the driver instead of spinning. It costs one RMT TX
+channel (two exist on the C3/C6/H2, four on the S3, eight on the ESP32) and
+6 KB of RAM per pin in use, and is not available on the ESP32-C2, which has
+no RMT. If no channel is free, `begin()` logs an error and falls back to the
+CPU-timed path. Two details of how it works are visible from outside:
+
+* The frame is queued as the protocol code builds it and sent when a space of
+  10 ms or more (every protocol's closing gap, and the gaps between the
+  sections of long A/C messages) or `sendRaw()`'s end is reached; `send()`
+  returns once it has been sent, as before. The few protocols whose closing
+  gap is shorter (Trotec: 1.5 ms) are sent by a 5 ms idle timer instead, so
+  for them `send()` returns before the frame is on the air. `end()` and the
+  destructor wait for it.
+* The receiver's `irrecv.resume()` after a `send()` still discards your own
+  transmission, except in that last case.
+
+Without it, transmit is bit-banged from the calling task, so the frame is
+only as clean as that task's timing. Three settings matter, and the examples
+ship the first one in their `sdkconfig.defaults`:
 
 * **`CONFIG_FREERTOS_HZ=1000`** (default 100). Spaces longer than 16 ms yield
   whole ticks to the scheduler and busy-wait the rest, so the tick sets the
@@ -133,7 +154,8 @@ Under **Component config → IRremote (infrared send/receive)**:
 | --- | --- | --- |
 | Enable every supported protocol | on | Turn off to pick protocols individually and shrink the build. |
 | Protocols → *`<name>`: send / decode* | follows the above | One switch per protocol direction, 241 in total. |
-| Generate the transmit carrier in hardware (LEDC) | off | Offloads the 30–60 kHz carrier to an LEDC channel. |
+| Transmit with the RMT peripheral | off | Times the whole frame in hardware. See [Transmit timing](#transmit-timing). |
+| Generate the transmit carrier in hardware (LEDC) | off | Offloads the 30–60 kHz carrier to an LEDC channel; the marks and spaces are still timed by the CPU. Ignored when RMT is on. |
 | Language/locale for human readable output | en-AU | 15 locales available, `es-ES` among them. |
 | Print library debug output | off | Enables the internal `DPRINT` tracing. |
 
@@ -177,7 +199,7 @@ make -C test run
 
 | Workflow | Runs on | What it checks |
 | --- | --- | --- |
-| `ci.yml` | push, PR | Host unit tests; the 4 examples on esp32/s3/c3 against IDF 5.1, 5.5 and 6.0; `ir_receive_dump` on all 9 declared targets; the LEDC carrier, debug, locale and minimal-protocol build options; that `compote component pack` accepts the manifest; that `Kconfig` matches the generator. |
+| `ci.yml` | push, PR | Host unit tests; the 4 examples on esp32/s3/c3 against IDF 5.1, 5.5 and 6.0; `ir_receive_dump` on all 9 declared targets; the RMT transmit, LEDC carrier, debug, locale and minimal-protocol build options, with RMT also on IDF 5.1 and 6.0; that `compote component pack` accepts the manifest; that `Kconfig` matches the generator. |
 | `lint.yml` | push, PR | cpplint over `src/` and `include/` with the upstream style rules, flake8 over `tools/`, yamllint over the manifests and workflows. |
 | `docs.yml` | push to main | Doxygen (warnings are errors), published to [GitHub Pages](https://jorgecis.github.io/IRremoteIDF/). |
 | `release.yml` | tag `v*` | Checks the tag matches `idf_component.yml` and has a `CHANGELOG.md` section, uploads the component to the ESP Component Registry, then cuts a GitHub Release from that section. Safe to re-run: a version already published or a release already created is skipped. |
