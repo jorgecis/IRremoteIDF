@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string>
+#include <type_traits>
 #ifdef UNIT_TEST
 #include <iostream>  // Debug output goes to cout when off-target.
 #endif  // UNIT_TEST
@@ -89,7 +90,10 @@ void irCarrierOff(int8_t channel);
 
 #endif  // UNIT_TEST
 
-// Debug output. Enable by defining DEBUG (e.g. -DDEBUG=1).
+// Debug output. Enable with CONFIG_IRREMOTE_DEBUG or by defining DEBUG
+// (e.g. -DDEBUG=1). IRconfig.h maps the former onto the latter, so it has to
+// be seen before the test below.
+#include "IRconfig.h"
 #ifdef DEBUG
 #ifdef UNIT_TEST
 #define DPRINT(x) do { \
@@ -101,8 +105,19 @@ void irCarrierOff(int8_t channel);
 #else  // UNIT_TEST
 void irDebugPrint(const char *str);
 void irDebugPrint(const String &str);
+void irDebugPrint(char c);
 void irDebugPrint(uint64_t value);
 void irDebugPrint(int64_t value);
+/// Any other integer type. Without this, an `int` or a `uint16_t` converts
+/// equally well to `uint64_t` and `int64_t`, and the call is ambiguous.
+template <typename T>
+inline typename std::enable_if<std::is_integral<T>::value>::type
+irDebugPrint(T value) {
+  if (std::is_signed<T>::value)
+    irDebugPrint(static_cast<int64_t>(value));
+  else
+    irDebugPrint(static_cast<uint64_t>(value));
+}
 #define DPRINT(x) do { \
     irDebugPrint(x); \
   } while (0)

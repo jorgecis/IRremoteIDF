@@ -95,6 +95,7 @@ void irRestart(void) { esp_restart(); }
 #ifdef DEBUG
 void irDebugPrint(const char *str) { fputs(str, stdout); }
 void irDebugPrint(const String &str) { fputs(str.c_str(), stdout); }
+void irDebugPrint(char c) { putchar(c); }
 void irDebugPrint(uint64_t value) { printf("%" PRIu64, value); }
 void irDebugPrint(int64_t value) { printf("%" PRId64, value); }
 #endif  // DEBUG
