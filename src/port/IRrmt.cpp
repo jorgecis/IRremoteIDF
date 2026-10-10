@@ -73,8 +73,10 @@ const uint32_t kFlushGapUs = 10000;
 const uint32_t kIdleFlushUs = 5000;
 /// Added to the expected air time when waiting for the hardware.
 const int kWaitMarginMs = 100;
-/// Slots are keyed by GPIO, so the number of TX channels bounds them.
-const size_t kSlots = SOC_RMT_GROUPS * SOC_RMT_TX_CANDIDATES_PER_GROUP;
+/// Slots are keyed by GPIO, one TX channel each. No chip has more than 8,
+/// and the driver reports running out on its own, so this is only a bound.
+/// (IDF 6 dropped the SOC_RMT_* counts that could have sized it exactly.)
+const size_t kSlots = 8;
 
 struct Chunk {
   rmt_symbol_word_t *words;
