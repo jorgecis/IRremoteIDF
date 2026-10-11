@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2
+
+* Fix builds with `DEBUG` defined failing to compile: `DPRINT()` of an
+  `int`, `uint16_t`, `uint32_t` or a pointer difference was ambiguous
+  between the 64-bit `irDebugPrint` overloads. A `char` now prints as a
+  character. (#4)
+* Make `CONFIG_IRREMOTE_DEBUG` actually enable `DPRINT()`. `IRconfig.h`,
+  which maps it to `DEBUG`, was included after the check. (#4)
+
 ## 1.0.1
 
 * Fix long inter-frame spaces (over 16 ms) coming out up to one FreeRTOS
