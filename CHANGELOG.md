@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.2
+## Unreleased
 
 * Add `CONFIG_IRREMOTE_TX_RMT`: transmit through the RMT peripheral. The
   protocol code queues each frame and the hardware times its marks and
