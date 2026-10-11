@@ -8,6 +8,13 @@
   character. (#4)
 * Make `CONFIG_IRREMOTE_DEBUG` actually enable `DPRINT()`. `IRconfig.h`,
   which maps it to `DEBUG`, was included after the check. (#4)
+* Fix loops whose counter is narrower than their bound, flagged by GitHub
+  code scanning (CodeQL). `sendPronto()` with a sequence of 65535 entries
+  wrapped its `uint16_t` counter and never returned; the other loops only
+  had small bounds in practice. No change for valid input.
+* Run the CI, lint and release workflows with a read-only token by
+  default, also flagged by code scanning. Only the job that creates the
+  GitHub Release can write.
 
 ## 1.0.1
 
