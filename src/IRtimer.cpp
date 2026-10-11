@@ -15,7 +15,7 @@ IRtimer::IRtimer() { reset(); }
 /// Resets the IRtimer object. I.e. The counter starts again from now.
 void IRtimer::reset() {
 #ifndef UNIT_TEST
-  start = irMicros();
+  start = irMicros() + irTxLeadUs();
 #else
   start = _IRtimer_unittest_now;
 #endif
@@ -25,7 +25,9 @@ void IRtimer::reset() {
 /// @return Nr. of microseconds.
 uint32_t IRtimer::elapsed() {
 #ifndef UNIT_TEST
-  uint32_t now = irMicros();
+  // With RMT transmit the frame is queued, not played, so the time it will
+  // take on the air is counted in. See irTxLeadUs().
+  uint32_t now = irMicros() + irTxLeadUs();
 #else
   uint32_t now = _IRtimer_unittest_now;
 #endif

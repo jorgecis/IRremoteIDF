@@ -9,6 +9,18 @@ config IRREMOTE_KCONFIG_PRESENT
         Internal marker so the library knows the Kconfig options
         were applied. Not user selectable.
 
+config IRREMOTE_TX_RMT
+    bool "Transmit with the RMT peripheral"
+    depends on SOC_RMT_SUPPORTED
+    default n
+    help
+        Queue each frame to an RMT channel, which times every mark and
+        space and modulates the carrier in hardware. The timing no
+        longer depends on the sending task, and the CPU is free while
+        a frame is on the air. Costs one RMT TX channel and 6 KB of
+        RAM per pin in use, and takes precedence over the LEDC carrier
+        below. Not offered on targets without RMT (ESP32-C2).
+
 config IRREMOTE_TX_HW_CARRIER
     bool "Generate the transmit carrier in hardware (LEDC)"
     default n

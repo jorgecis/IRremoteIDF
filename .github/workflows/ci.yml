@@ -86,6 +86,23 @@ jobs:
           rm -rf build sdkconfig
           idf.py set-target esp32h2
           idf.py build
+      - name: RMT transmit (together with the LEDC option, which it overrides)
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_send_demo
+          rm -rf build sdkconfig
+          echo "CONFIG_IRREMOTE_TX_RMT=y" >> sdkconfig.defaults
+          idf.py set-target esp32
+          idf.py build
+      - name: RMT transmit on a target with two RMT channels
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ir_repeater
+          echo "CONFIG_IRREMOTE_TX_RMT=y" >> sdkconfig.defaults
+          idf.py set-target esp32c3
+          idf.py build
       - name: Debug tracing and a non-default locale
         shell: bash
         run: |
@@ -104,6 +121,27 @@ jobs:
           printf 'CONFIG_IRREMOTE_ENABLE_ALL_PROTOCOLS=n\nCONFIG_IRREMOTE_DECODE_NEC=y\nCONFIG_IRREMOTE_SEND_NEC=y\n' \
             >> sdkconfig.defaults
           idf.py set-target esp32
+          idf.py build
+
+  rmt-idf-versions:
+    # The RMT driver API has moved between IDF releases; make sure the
+    # oldest and newest supported ones still build the transmit path.
+    name: RMT transmit on IDF ${{ matrix.idf }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        idf: ["v5.1", "v6.0"]
+    container: espressif/idf:release-${{ matrix.idf }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        shell: bash
+        run: |
+          . "${IDF_PATH}/export.sh"
+          cd examples/ac_control
+          echo "CONFIG_IRREMOTE_TX_RMT=y" >> sdkconfig.defaults
+          idf.py set-target esp32s3
           idf.py build
 
   manifest:
