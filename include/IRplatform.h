@@ -88,6 +88,32 @@ void irCarrierOn(int8_t channel);
 void irCarrierOff(int8_t channel);
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
 
+#ifdef CONFIG_IRREMOTE_TX_RMT
+// Optional transmit through the RMT peripheral: marks and spaces are queued
+// and the hardware times them. src/port/IRrmt.cpp explains how the end of a
+// frame is found.
+
+/// Claim an RMT TX channel for `pin`, sharing one already bound to it.
+/// @return A slot number, or -1 if no channel was available.
+int8_t irRmtAttach(uint16_t pin, bool inverted);
+/// Release a slot. Anything still queued is sent and waited for first.
+void irRmtDetach(int8_t slot, bool inverted);
+/// Set the carrier frequency (Hz) and duty cycle (percent); 100 = none.
+void irRmtCarrier(int8_t slot, uint32_t freq, uint8_t duty);
+/// Queue a mark (carrier on) of `usec`.
+void irRmtMark(int8_t slot, uint32_t usec);
+/// Queue a space of `usec`. A long one also sends the frame, see irRmtFlush.
+void irRmtSpace(int8_t slot, uint32_t usec);
+/// Send whatever is queued and wait until it has been on the air.
+void irRmtFlush(int8_t slot);
+/// Microseconds queued by the calling task but not yet on the air. IRtimer
+/// adds it, so a protocol that paces its gaps by elapsed time measures the
+/// frame it built, not the microseconds it took to queue it.
+uint32_t irTxLeadUs(void);
+#else  // CONFIG_IRREMOTE_TX_RMT
+inline uint32_t irTxLeadUs(void) { return 0; }
+#endif  // CONFIG_IRREMOTE_TX_RMT
+
 #endif  // UNIT_TEST
 
 // Debug output. Enable with CONFIG_IRREMOTE_DEBUG or by defining DEBUG

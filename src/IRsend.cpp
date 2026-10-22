@@ -37,6 +37,9 @@ IRsend::IRsend(uint16_t IRsendPin, bool inverted, bool use_modulation)
 #if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_HW_CARRIER)
   _carrier = -1;
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  _rmt = -1;
+#endif  // CONFIG_IRREMOTE_TX_RMT
   if (inverted) {
     outputOn = LOW;
     outputOff = HIGH;
@@ -58,6 +61,14 @@ IRsend::~IRsend() { end(); }
 /// Enable the pin for output.
 void IRsend::begin() {
 #ifndef UNIT_TEST
+#ifdef CONFIG_IRREMOTE_TX_RMT
+  // RMT owns the pad. With no channel free, fall back to CPU timing below.
+  if (_rmt < 0) _rmt = irRmtAttach(IRpin, outputOn == LOW);
+  if (_rmt >= 0) {
+    _begun = true;
+    return;
+  }
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
   // ledc_channel_config() claims the pad itself. Configuring it as a plain
   // GPIO first would unroute the channel another IRsend on this pin is
@@ -79,6 +90,13 @@ void IRsend::end() {
   if (!_begun) return;
   _begun = false;
 #ifndef UNIT_TEST
+#ifdef CONFIG_IRREMOTE_TX_RMT
+  if (_rmt >= 0) {
+    irRmtDetach(_rmt, outputOn == LOW);
+    _rmt = -1;
+    return;
+  }
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
   if (_carrier >= 0) {
     irCarrierDetach(_carrier, IRpin, outputOn == LOW);
@@ -93,6 +111,14 @@ void IRsend::end() {
 /// Turn off the IR LED.
 void IRsend::ledOff() {
 #ifndef UNIT_TEST
+#ifdef CONFIG_IRREMOTE_TX_RMT
+  // sendRaw() and the GlobalCache sender call this because their data may
+  // end in a mark, which makes it the point where their frame is complete.
+  if (_rmt >= 0) {
+    irRmtFlush(_rmt);
+    return;
+  }
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
   if (_carrier >= 0) {
     irCarrierOff(_carrier);
@@ -106,6 +132,9 @@ void IRsend::ledOff() {
 /// Turn on the IR LED.
 void IRsend::ledOn() {
 #ifndef UNIT_TEST
+#ifdef CONFIG_IRREMOTE_TX_RMT
+  if (_rmt >= 0) return;  // Marks are queued, never driven live.
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #ifdef CONFIG_IRREMOTE_TX_HW_CARRIER
   if (_carrier >= 0) {
     irCarrierOn(_carrier);
@@ -159,6 +188,9 @@ void IRsend::enableIROut(uint32_t freq, uint8_t duty) {
   onTimePeriod = (period * _dutycycle) / kDutyMax;
   // Nr. of uSeconds the LED will be off per pulse.
   offTimePeriod = period - onTimePeriod;
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  if (_rmt >= 0) irRmtCarrier(_rmt, freq, _dutycycle);
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_HW_CARRIER)
   if (_carrier >= 0) irCarrierConfig(_carrier, freq, _dutycycle);
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
@@ -216,6 +248,13 @@ uint16_t IRsend::mark(uint16_t usec) {
   timingList.push_back(usec);
   return 1;
 #else  // SWIGLIB
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  if (_rmt >= 0) {
+    irRmtMark(_rmt, usec);
+    const uint16_t period = onTimePeriod + offTimePeriod;
+    return period ? ((usec + period - 1) / period) : 1;
+  }
+#endif  // CONFIG_IRREMOTE_TX_RMT
 #if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_HW_CARRIER)
   if (_carrier >= 0) {
     // The LEDC peripheral emits the carrier, so we only time the mark itself.
@@ -266,6 +305,12 @@ uint16_t IRsend::mark(uint16_t usec) {
 /// A space is no output, so the PWM output is disabled.
 /// @param[in] time Time in microseconds (us).
 void IRsend::space(uint32_t time) {
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  if (_rmt >= 0) {
+    irRmtSpace(_rmt, time);
+    return;
+  }
+#endif  // CONFIG_IRREMOTE_TX_RMT
   ledOff();
   if (time == 0) return;
 #ifdef SWIGLIB
@@ -287,6 +332,10 @@ int8_t IRsend::calibrate(uint16_t hz) {
   if (hz < 1000)  // Were we given kHz? Supports the old call usage.
     hz *= 1000;
   periodOffset = 0;  // Turn off any existing offset while we calibrate.
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  // The offset compensates for the CPU's own execution time. RMT has none.
+  if (_rmt >= 0) return 0;
+#endif  // CONFIG_IRREMOTE_TX_RMT
   enableIROut(hz);
   IRtimer usecTimer = IRtimer();  // Start a timer *just* before we do the call.
   uint16_t pulses = mark(UINT16_MAX);  // Generate a PWM of 65,535 us. (Max.)

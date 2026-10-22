@@ -947,6 +947,9 @@ class IRsend {
 #if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_HW_CARRIER)
   int8_t _carrier;  ///< LEDC channel emitting the carrier, or -1 for software.
 #endif  // CONFIG_IRREMOTE_TX_HW_CARRIER
+#if !defined(UNIT_TEST) && defined(CONFIG_IRREMOTE_TX_RMT)
+  int8_t _rmt;  ///< RMT slot timing the frames, or -1 for the CPU.
+#endif  // CONFIG_IRREMOTE_TX_RMT
   int8_t periodOffset;
   bool _begun;  ///< begin() has run and end() has not undone it.
   uint8_t _dutycycle;
