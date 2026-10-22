@@ -8,6 +8,22 @@
   sending task's scheduling and the CPU is free while a frame is on the air.
   Off by default; it takes one RMT TX channel and 6 KB per pin. (#3)
 
+## 1.0.2
+
+* Fix builds with `DEBUG` defined failing to compile: `DPRINT()` of an
+  `int`, `uint16_t`, `uint32_t` or a pointer difference was ambiguous
+  between the 64-bit `irDebugPrint` overloads. A `char` now prints as a
+  character. (#4)
+* Make `CONFIG_IRREMOTE_DEBUG` actually enable `DPRINT()`. `IRconfig.h`,
+  which maps it to `DEBUG`, was included after the check. (#4)
+* Fix loops whose counter is narrower than their bound, flagged by GitHub
+  code scanning (CodeQL). `sendPronto()` with a sequence of 65535 entries
+  wrapped its `uint16_t` counter and never returned; the other loops only
+  had small bounds in practice. No change for valid input.
+* Run the CI, lint and release workflows with a read-only token by
+  default, also flagged by code scanning. Only the job that creates the
+  GitHub Release can write.
+
 ## 1.0.1
 
 * Fix long inter-frame spaces (over 16 ms) coming out up to one FreeRTOS
